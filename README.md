@@ -21,24 +21,32 @@ Pick a problem type, enter your functions, and get:
 
 | Problem type | Syllabus module | Status |
 |---|---|---|
-| Area between curves | Single Variable Calculus | Planned |
+| Area between curves | Single Variable Calculus | Implemented |
 | Volume of solids of revolution | Single Variable Calculus | Planned |
 | Double integrals and change of order | Multivariable Integral Calculus | Planned |
 
 ## Tech stack
 
 - **Backend:** Python, FastAPI, SymPy
-- **Frontend:** React, KaTeX, Plotly.js
+- **Frontend:** HTML, CSS, JavaScript, SVG
 - **Database:** PostgreSQL (ratings and feedback)
 - **DevOps:** Docker, GitHub Actions
 
-## Getting started
+## Run locally
 
-Setup instructions will be added once the first version is running.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m uvicorn backend.main:app --reload
+```
+
+Open http://127.0.0.1:8000. The solver accepts `x`, numeric constants, `pi`, `e`,
+`+`, `-`, `*`, `/`, `**`, and `sin`, `cos`, `tan`, `exp`, `log`, `sqrt`, and `abs`.
 
 ## Roadmap
 
-- [ ] Area between curves solver
+- [x] Area between curves solver
 - [ ] Volume of revolution solver
 - [ ] Double integral solver
 - [ ] Ratings and feedback page
