@@ -3,8 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f7f7f4" />
+    <meta name="theme-color" content="#f7f8f5" />
     <title>Calculus Visualizer</title>
+    <script>
+      const savedTheme = localStorage.getItem("calculus-visualizer-theme");
+      if (savedTheme === "light" || savedTheme === "dark") {
+        document.documentElement.dataset.theme = savedTheme;
+      } else {
+        document.documentElement.dataset.theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.themeMode = "system";
+      }
+    </script>
     <link rel="stylesheet" href="/assets/styles.css" />
     <script src="/assets/app.js" defer></script>
   </head>
@@ -15,7 +24,10 @@
           <span class="brand-mark">∫</span>
           <span>calculus<span class="brand-light">.visualizer</span></span>
         </a>
-        <span class="topbar-note"><span class="status-dot"></span> Interactive lesson</span>
+        <div class="topbar-actions">
+          <span class="topbar-note"><span class="status-dot"></span> Interactive lesson</span>
+          <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">Dark mode</button>
+        </div>
       </header>
 
       <section class="intro">

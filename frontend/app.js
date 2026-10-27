@@ -7,6 +7,7 @@ const intervalSummary = document.querySelector("#interval-summary");
 const stepCounter = document.querySelector("#step-counter");
 const previousButton = document.querySelector("#previous-step");
 const nextButton = document.querySelector("#next-step");
+const themeToggle = document.querySelector("#theme-toggle");
 const areaModeButton = document.querySelector("#area-mode");
 const volumeModeButton = document.querySelector("#volume-mode");
 const rotationAxis = document.querySelector("#rotation-axis");
@@ -17,6 +18,32 @@ let solution = null;
 let activeStep = -1;
 let mode = "area";
 let latestRequest = 0;
+const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+function updateThemeToggle() {
+  const isDark = document.documentElement.dataset.theme === "dark"
+    || (!document.documentElement.dataset.theme && systemTheme.matches);
+  themeToggle.setAttribute("aria-pressed", String(isDark));
+  themeToggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} mode`);
+  themeToggle.textContent = `${isDark ? "Light" : "Dark"} mode`;
+  document.querySelector('meta[name="theme-color"]').content = isDark ? "#151c1a" : "#f7f8f5";
+}
+
+systemTheme.addEventListener("change", (event) => {
+  if (document.documentElement.dataset.themeMode !== "system") return;
+  document.documentElement.dataset.theme = event.matches ? "dark" : "light";
+  updateThemeToggle();
+});
+
+themeToggle.addEventListener("click", () => {
+  const isDark = themeToggle.getAttribute("aria-pressed") === "true";
+  document.documentElement.dataset.theme = isDark ? "light" : "dark";
+  document.documentElement.dataset.themeMode = "user";
+  localStorage.setItem("calculus-visualizer-theme", isDark ? "light" : "dark");
+  updateThemeToggle();
+});
+
+updateThemeToggle();
 
 function svgElement(name, attributes = {}, text = "") {
   const element = document.createElementNS(SVG_NS, name);
