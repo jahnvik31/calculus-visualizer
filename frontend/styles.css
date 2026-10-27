@@ -24,13 +24,17 @@ button { cursor: pointer; }
 .brand-light { color: #81908b; font-weight: 500; }
 .topbar-note { display: flex; gap: 8px; align-items: center; color: #677772; font-size: 12px; }
 .status-dot { height: 7px; width: 7px; background: #5e9a79; border-radius: 99px; box-shadow: 0 0 0 3px #e4eee7; }
-.intro { max-width: 660px; padding: 54px 0 37px; }
+.intro { max-width: 660px; padding: 54px 0 25px; }
 .eyebrow { margin: 0 0 9px; color: #789088; font: 500 10px Consolas, monospace; letter-spacing: 1.3px; }
 .eyebrow > span { padding: 0 4px; color: #b9c4be; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 13px; font: 800 clamp(38px, 5vw, 56px)/1.09 "Segoe UI", Arial, sans-serif; letter-spacing: -2.6px; }
 h1 span { color: var(--green); }
 .intro-copy { margin: 0; max-width: 520px; color: #73807d; font-size: 14px; line-height: 1.65; }
+.mode-switch { display: flex; gap: 5px; width: fit-content; margin-top: 21px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #eef2ef; }
+.mode-button { padding: 8px 12px; border: 0; border-radius: 5px; background: transparent; color: #718079; font-size: 11px; font-weight: 600; }
+.mode-button.active { background: white; color: var(--green-dark); box-shadow: 0 1px 4px #263c2f12; }
+[hidden] { display: none !important; }
 .workspace { display: grid; grid-template-columns: 325px minmax(0, 1fr); gap: 19px; align-items: start; }
 .input-panel, .result-panel { background: var(--panel); border: 1px solid #e7ebe7; border-radius: 13px; box-shadow: 0 3px 15px #263c2f08; }
 .input-panel { padding: 24px 22px 21px; }
@@ -41,6 +45,8 @@ h2 { margin: 0; font: 700 17px "Segoe UI", Arial, sans-serif; letter-spacing: -.
 .text-button:hover { color: var(--green-dark); }
 .function-field { display: flex; align-items: center; min-height: 55px; gap: 12px; margin-bottom: 10px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
 .function-field:focus-within, .bound-input:focus-within { border-color: #85a99a; box-shadow: 0 0 0 3px #39725f12; }
+.axis-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -4px 0 15px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.axis-field select { min-width: 100px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--ink); font-size: 12px; }
 .field-label { display: flex; align-items: center; gap: 8px; color: #61716c; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .curve-dot { height: 8px; width: 8px; border-radius: 99px; }
 .curve-dot.red { background: var(--red); }
@@ -82,6 +88,12 @@ code { color: #647a70; font: 10px Consolas, monospace; }
 .area-shape { fill: #abd2bb; fill-opacity: .46; stroke: #91bea4; stroke-width: 1; }
 .bound-line { stroke: #91a59a; stroke-dasharray: 4 5; stroke-width: 1; }
 .intersection-dot { fill: #fff; stroke: var(--green); stroke-width: 2; }
+.solid-face { fill: #6ea287; fill-opacity: .18; stroke: #53836b; stroke-opacity: .35; stroke-width: .8; }
+.solid-inner-face { fill: #7d96b2; fill-opacity: .14; stroke: #557395; stroke-opacity: .4; stroke-width: .8; }
+.solid-ring { fill: none; stroke: #53836b; stroke-width: 1.2; stroke-opacity: .72; }
+.solid-slice { fill: #e9a953; fill-opacity: .5; stroke: #c17d22; stroke-width: 2; }
+.solid-axis { stroke: #75867e; stroke-dasharray: 4 5; stroke-width: 1.2; }
+.solid-label { fill: #67776f; font: 11px Consolas, monospace; }
 .result-summary { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 17px 0 14px; border-bottom: 1px solid #edf0ed; }
 .result-summary .eyebrow { margin-bottom: 3px; }
 .area-value { margin: 0; color: var(--green-dark); font: 700 23px "Segoe UI", Arial, sans-serif; letter-spacing: -.7px; }
@@ -100,7 +112,7 @@ code { color: #647a70; font: 10px Consolas, monospace; }
   .page-shell { padding: 0 22px; }
   .workspace { grid-template-columns: 1fr; }
   .input-panel { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; align-items: start; }
-  .input-panel .panel-heading, .bounds-heading, .bounds-fields, .syntax-hint, .solve-button, .error-message { grid-column: 1 / -1; }
+  .input-panel .panel-heading, #volume-options, .bounds-heading, .bounds-fields, .syntax-hint, .solve-button, .error-message { grid-column: 1 / -1; }
   .input-panel .panel-heading { margin-bottom: 14px; }
   .function-field { margin-bottom: 0; }
   .bounds-heading { margin-top: 16px; }

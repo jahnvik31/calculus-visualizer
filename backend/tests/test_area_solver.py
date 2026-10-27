@@ -7,6 +7,7 @@ from backend.area_solver import (
     area_under_curve,
     parse_expression,
     solve_area_between_curves,
+    solve_volume_of_revolution,
 )
 
 
@@ -42,3 +43,24 @@ def test_rejects_python_execution_syntax():
 def test_rejects_reversed_bounds():
     with pytest.raises(ValueError, match="lower bound"):
         area_between_curves("x", "0", 2, 1)
+
+
+def test_volume_about_x_axis_uses_disks_and_highlights_a_slice():
+    result = solve_volume_of_revolution("x", "0", "x", 0, 1)
+    assert math.isclose(result["volume"], math.pi / 3, rel_tol=1e-9)
+    assert result["sections"][0]["method"] == "disk"
+    assert result["representative_slice"]["outer_radius"] > 0
+    assert result["representative_slice"]["inner_radius"] == 0
+
+
+def test_volume_about_y_axis_uses_washers_and_y_variable():
+    result = solve_volume_of_revolution("2", "1", "y", 0, 3)
+    assert math.isclose(result["volume"], 9 * math.pi, rel_tol=1e-9)
+    assert result["sections"][0]["method"] == "washer"
+    assert result["variable"] == "y"
+
+
+def test_volume_splits_when_region_crosses_rotation_axis():
+    result = solve_volume_of_revolution("x", "0", "x", -1, 1)
+    assert len(result["sections"]) == 2
+    assert math.isclose(result["volume"], 2 * math.pi / 3, rel_tol=1e-9)

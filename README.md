@@ -22,7 +22,7 @@ Pick a problem type, enter your functions, and get:
 | Problem type | Syllabus module | Status |
 |---|---|---|
 | Area between curves | Single Variable Calculus | Implemented |
-| Volume of solids of revolution | Single Variable Calculus | Planned |
+| Volume of solids of revolution | Single Variable Calculus | Implemented |
 | Double integrals and change of order | Multivariable Integral Calculus | Planned |
 
 ## Tech stack
@@ -47,7 +47,7 @@ Open http://127.0.0.1:8000. The solver accepts `x`, numeric constants, `pi`, `e`
 ## Roadmap
 
 - [x] Area between curves solver
-- [ ] Volume of revolution solver
+- [x] Volume of revolution solver
 - [ ] Double integral solver
 - [ ] Ratings and feedback page
 - [ ] Deployment

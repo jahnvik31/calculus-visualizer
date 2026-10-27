@@ -31,8 +31,10 @@ OPERATORS = {
 }
 
 
-def parse_expression(expression: str) -> sp.Expr:
+def parse_expression(expression: str, variable: str = "x") -> sp.Expr:
     """Parse a small arithmetic expression without evaluating arbitrary Python."""
+    if variable not in {"x", "y"}:
+        raise ValueError("The variable must be x or y.")
     if not isinstance(expression, str) or not expression.strip():
         raise ValueError("Enter a function before solving.")
     if len(expression) > MAX_EXPRESSION_LENGTH:
@@ -49,11 +51,11 @@ def parse_expression(expression: str) -> sp.Expr:
                 raise ValueError("Function constants must be finite.")
             return sp.sympify(node.value)
         if isinstance(node, ast.Name):
-            if node.id == "x":
+            if node.id == variable:
                 return X
             if node.id in CONSTANTS:
                 return CONSTANTS[node.id]
-            raise ValueError(f"Unsupported name {node.id!r}. Use x, pi, or e.")
+            raise ValueError(f"Unsupported name {node.id!r}. Use {variable}, pi, or e.")
         if isinstance(node, ast.BinOp) and type(node.op) in OPERATORS:
             left, right = convert(node.left), convert(node.right)
             if isinstance(node.op, ast.Pow):
@@ -77,7 +79,7 @@ def parse_expression(expression: str) -> sp.Expr:
         raise ValueError("Function could not be evaluated.") from exc
 
 
-def _expression(value: str | int | float | sp.Expr, label: str) -> sp.Expr:
+def _expression(value: str | int | float | sp.Expr, label: str, variable: str = "x") -> sp.Expr:
     if isinstance(value, sp.Expr):
         return value
     if isinstance(value, (int, float)):
@@ -85,7 +87,7 @@ def _expression(value: str | int | float | sp.Expr, label: str) -> sp.Expr:
             raise ValueError(f"{label} must be finite.")
         return sp.sympify(value)
     try:
-        return parse_expression(value)
+        return parse_expression(value, variable)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label}: {exc}") from exc
 
@@ -307,4 +309,114 @@ def solve_area_under_curve(function: str | int | float | sp.Expr, a: float, b: f
             "Find an antiderivative and evaluate it at the upper and lower bounds.",
             f"Signed area = {_format_number(area)} square units.",
         ],
+    }
+
+
+def solve_volume_of_revolution(
+    first: str | int | float | sp.Expr,
+    second: str | int | float | sp.Expr,
+    axis: str,
+    a: float,
+    b: float,
+) -> dict[str, Any]:
+    """Solve a bounded region's volume using disk/washer cross-sections."""
+    if axis not in {"x", "y"}:
+        raise ValueError("Choose the x-axis or y-axis of rotation.")
+    variable = axis
+    lower, upper = _validate_bounds(a, b)
+    f = _expression(first, "First function", variable)
+    g = _expression(second, "Second function", variable)
+
+    split_points = {lower, upper}
+    for expression in (f, g, f - g, f + g):
+        split_points.update(
+            root
+            for root in find_intersection_points(expression, 0, lower=lower, upper=upper)
+            if lower < root < upper
+        )
+    points = sorted(split_points)
+    sections: list[dict[str, Any]] = []
+    total = 0.0
+    for section_lower, section_upper in zip(points, points[1:]):
+        midpoint = (section_lower + section_upper) / 2
+        f_mid = _real_float(f.subs(X, midpoint), "First function")
+        g_mid = _real_float(g.subs(X, midpoint), "Second function")
+        if f_mid * g_mid < 0:
+            outer = f if abs(f_mid) >= abs(g_mid) else g
+            inner = sp.Integer(0)
+        elif abs(f_mid) >= abs(g_mid):
+            outer, inner = f, g
+        else:
+            outer, inner = g, f
+
+        integrand = sp.simplify(sp.pi * (outer**2 - inner**2))
+        section_volume = _integral(integrand, section_lower, section_upper)
+        if section_volume < -1e-8:
+            raise ValueError("Unable to determine a nonnegative volume on this interval.")
+        section_volume = max(0.0, section_volume)
+        method = "disk" if inner == 0 else "washer"
+        reason = (
+            "The region reaches the axis of rotation here, so the inner radius is 0 and the cross-section is a disk."
+            if method == "disk"
+            else "The region stays away from the axis of rotation here, leaving a nonzero inner radius and a washer."
+        )
+        sample_count = 24
+        samples = []
+        for index in range(sample_count + 1):
+            coordinate = section_lower + (section_upper - section_lower) * index / sample_count
+            samples.append(
+                {
+                    "coordinate": coordinate,
+                    "outer_radius": abs(_real_float(outer.subs(X, coordinate), "Outer radius")),
+                    "inner_radius": abs(_real_float(inner.subs(X, coordinate), "Inner radius")),
+                }
+            )
+        sections.append(
+            {
+                "lower": section_lower,
+                "upper": section_upper,
+                "outer_radius": sp.sstr(outer),
+                "inner_radius": sp.sstr(inner),
+                "method": method,
+                "reason": reason,
+                "integrand": sp.sstr(integrand),
+                "volume": section_volume,
+                "samples": samples,
+            }
+        )
+        total += section_volume
+
+    integral_setup = " + ".join(
+        f"∫[{_format_number(section['lower'])}, {_format_number(section['upper'])}] "
+        f"{section['integrand']} d{variable}"
+        for section in sections
+    )
+    representative_section = max(sections, key=lambda section: section["upper"] - section["lower"])
+    representative_slice = representative_section["samples"][len(representative_section["samples"]) // 2]
+    steps = [
+        f"The bounded region is between {sp.sstr(f)} and {sp.sstr(g)} for {variable} ∈ [{_format_number(lower)}, {_format_number(upper)}].",
+        f"Rotate about the {axis}-axis. Slices perpendicular to the axis use the disk/washer formula π(R² − r²) d{variable}.",
+        *[
+            f"On [{_format_number(section['lower'])}, {_format_number(section['upper'])}], "
+            f"R = |{section['outer_radius']}| and r = |{section['inner_radius']}|: {section['reason']}"
+            for section in sections
+        ],
+        f"Set up the volume integral: π({integral_setup}).",
+        f"Evaluate and add the cross-sections: {_format_number(total)} cubic units.",
+    ]
+    return {
+        "axis": axis,
+        "variable": variable,
+        "first_curve": sp.sstr(f),
+        "second_curve": sp.sstr(g),
+        "bounds": [lower, upper],
+        "sections": sections,
+        "integral_setup": integral_setup,
+        "volume": total,
+        "steps": steps,
+        "representative_slice": {
+            **representative_slice,
+            "method": representative_section["method"],
+            "reason": representative_section["reason"],
+        },
     }

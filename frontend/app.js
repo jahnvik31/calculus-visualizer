@@ -7,9 +7,16 @@ const intervalSummary = document.querySelector("#interval-summary");
 const stepCounter = document.querySelector("#step-counter");
 const previousButton = document.querySelector("#previous-step");
 const nextButton = document.querySelector("#next-step");
+const areaModeButton = document.querySelector("#area-mode");
+const volumeModeButton = document.querySelector("#volume-mode");
+const rotationAxis = document.querySelector("#rotation-axis");
+const firstFunctionLabel = document.querySelector("#first-function-label");
+const secondFunctionLabel = document.querySelector("#second-function-label");
 const SVG_NS = "http://www.w3.org/2000/svg";
 let solution = null;
 let activeStep = -1;
+let mode = "area";
+let latestRequest = 0;
 
 function svgElement(name, attributes = {}, text = "") {
   const element = document.createElementNS(SVG_NS, name);
@@ -107,6 +114,93 @@ function drawGraph(data, selectedStep) {
   }
 }
 
+function drawSolid(data, selectedStep) {
+  graph.replaceChildren();
+  const width = 900;
+  const height = 430;
+  const allSamples = data.sections.flatMap((section) => section.samples);
+  const maximumRadius = Math.max(1, ...allSamples.map((sample) => sample.outer_radius));
+  const [minimum, maximum] = data.bounds;
+  const midpoint = (minimum + maximum) / 2;
+  const axialScale = (data.axis === "x" ? 550 : 245) / (maximum - minimum);
+  const radialScale = 135 / maximumRadius;
+  const project = (coordinate, radius, angle) => {
+    const radial = radius * radialScale;
+    const axial = (coordinate - midpoint) * axialScale;
+    const cosine = radial * Math.cos(angle);
+    const sine = radial * Math.sin(angle);
+    return data.axis === "x"
+      ? [450 + axial + sine * 0.42, 215 - cosine - sine * 0.2]
+      : [450 + cosine + sine * 0.35, 215 - axial - sine * 0.2];
+  };
+  const pointList = (sample, radius, reverse = false) => {
+    const angles = Array.from({ length: 32 }, (_, index) => (index / 32) * Math.PI * 2);
+    if (reverse) angles.reverse();
+    return angles.map((angle) => project(sample.coordinate, radius, angle));
+  };
+  const pathFromPoints = (points, close = false) =>
+    `${points.map(([px, py], index) => `${index ? "L" : "M"}${px},${py}`).join(" ")}${close ? " Z" : ""}`;
+
+  graph.append(svgElement("line", {
+    x1: project(minimum, 0, 0)[0], y1: project(minimum, 0, 0)[1],
+    x2: project(maximum, 0, 0)[0], y2: project(maximum, 0, 0)[1], class: "solid-axis",
+  }));
+  for (const section of data.sections) {
+    const samples = section.samples;
+    const angleCount = 24;
+    for (let index = 0; index < samples.length - 1; index += 1) {
+      for (let angleIndex = 0; angleIndex < angleCount; angleIndex += 1) {
+        const angle = (angleIndex / angleCount) * Math.PI * 2;
+        const nextAngle = ((angleIndex + 1) / angleCount) * Math.PI * 2;
+        const outerPoints = [
+          project(samples[index].coordinate, samples[index].outer_radius, angle),
+          project(samples[index + 1].coordinate, samples[index + 1].outer_radius, angle),
+          project(samples[index + 1].coordinate, samples[index + 1].outer_radius, nextAngle),
+          project(samples[index].coordinate, samples[index].outer_radius, nextAngle),
+        ];
+        graph.append(svgElement("path", { d: pathFromPoints(outerPoints, true), class: "solid-face" }));
+        if (section.method === "washer") {
+          const innerPoints = [
+            project(samples[index].coordinate, samples[index].inner_radius, angle),
+            project(samples[index + 1].coordinate, samples[index + 1].inner_radius, angle),
+            project(samples[index + 1].coordinate, samples[index + 1].inner_radius, nextAngle),
+            project(samples[index].coordinate, samples[index].inner_radius, nextAngle),
+          ];
+          graph.append(svgElement("path", { d: pathFromPoints(innerPoints, true), class: "solid-inner-face" }));
+        }
+      }
+    }
+    for (let index = 0; index < samples.length; index += 4) {
+      graph.append(svgElement("path", {
+        d: pathFromPoints(pointList(samples[index], samples[index].outer_radius), true),
+        class: "solid-ring",
+      }));
+    }
+    for (let angleIndex = 0; angleIndex < 12; angleIndex += 1) {
+      const angle = (angleIndex / 12) * Math.PI * 2;
+      const outerLine = samples.map((sample) => project(sample.coordinate, sample.outer_radius, angle));
+      graph.append(svgElement("path", { d: pathFromPoints(outerLine), class: "solid-ring" }));
+    }
+  }
+
+  if (selectedStep >= 2) {
+    const slice = data.representative_slice;
+    const outer = pointList(slice, slice.outer_radius);
+    const inner = slice.inner_radius > 1e-9 ? pointList(slice, slice.inner_radius, true) : [];
+    graph.append(svgElement("path", {
+      d: `${pathFromPoints(outer, true)} ${inner.length ? pathFromPoints(inner, true) : ""}`,
+      class: "solid-slice",
+      "fill-rule": "evenodd",
+    }));
+    const labelPosition = project(slice.coordinate, slice.outer_radius, Math.PI / 2);
+    graph.append(svgElement("text", {
+      x: labelPosition[0] + 10, y: labelPosition[1] - 8, class: "solid-label",
+    }, `${slice.method} slice`));
+  }
+  graph.append(svgElement("text", { x: 450, y: 405, "text-anchor": "middle", class: "solid-label" },
+    `Rotation about the ${data.axis}-axis · highlighted ${data.representative_slice.method}`));
+}
+
 function showStep(index) {
   if (!solution) return;
   activeStep = Math.max(0, Math.min(index, solution.steps.length - 1));
@@ -114,7 +208,8 @@ function showStep(index) {
   stepCounter.textContent = `${activeStep + 1} / ${solution.steps.length}`;
   previousButton.disabled = activeStep === 0;
   nextButton.disabled = activeStep === solution.steps.length - 1;
-  drawGraph(solution, activeStep);
+  if (mode === "volume") drawSolid(solution, activeStep);
+  else drawGraph(solution, activeStep);
 }
 
 function displaySolution(data) {
@@ -131,20 +226,24 @@ function displaySolution(data) {
     item.addEventListener("click", () => showStep(index));
     stepsList.append(item);
   });
-  areaValue.replaceChildren(document.createTextNode(Number(data.area.toPrecision(8)).toString()));
+  const isVolume = mode === "volume";
+  const resultValue = isVolume ? data.volume : data.area;
+  areaValue.replaceChildren(document.createTextNode(Number(resultValue.toPrecision(8)).toString()));
   const units = document.createElement("span");
-  units.textContent = " square units";
+  units.textContent = isVolume ? " cubic units" : " square units";
   areaValue.append(units);
-  intervalSummary.textContent = `x ∈ [${numberLabel(data.bounds[0])}, ${numberLabel(data.bounds[1])}]`;
+  intervalSummary.textContent = `${data.variable || "x"} ∈ [${numberLabel(data.bounds[0])}, ${numberLabel(data.bounds[1])}]${isVolume ? ` · ${data.axis}-axis rotation` : ""}`;
   showStep(0);
 }
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const requestId = ++latestRequest;
   errorMessage.hidden = true;
   const submitButton = form.querySelector("button[type=submit]");
   submitButton.disabled = true;
   submitButton.firstElementChild.textContent = "Solving…";
+  const isVolume = mode === "volume";
   const request = {
     first_function: form.elements.first_function.value,
     second_function: form.elements.second_function.value,
@@ -152,31 +251,101 @@ form.addEventListener("submit", async (event) => {
     upper_bound: form.elements.upper_bound.value === "" ? null : Number(form.elements.upper_bound.value),
   };
   try {
-    const response = await fetch("/api/solve", {
+    const response = await fetch(isVolume ? "/api/solve-volume" : "/api/solve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
+      body: JSON.stringify(isVolume ? { ...request, axis: rotationAxis.value } : request),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || "The problem could not be solved.");
-    displaySolution(result);
+    if (requestId === latestRequest) displaySolution(result);
   } catch (error) {
-    errorMessage.textContent = error instanceof Error ? error.message : "The problem could not be solved.";
-    errorMessage.hidden = false;
+    if (requestId === latestRequest) {
+      errorMessage.textContent = error instanceof Error ? error.message : "The problem could not be solved.";
+      errorMessage.hidden = false;
+    }
   } finally {
-    submitButton.disabled = false;
-    submitButton.firstElementChild.textContent = "Solve this area";
+    if (requestId === latestRequest) {
+      submitButton.disabled = false;
+      submitButton.firstElementChild.textContent = mode === "volume" ? "Solve this volume" : "Solve this area";
+    }
   }
 });
 
-document.querySelector("#example-button").addEventListener("click", () => {
-  form.elements.first_function.value = "x**2";
-  form.elements.second_function.value = "x";
-  form.elements.lower_bound.value = "0";
-  form.elements.upper_bound.value = "1";
+function loadExample() {
+  const axis = rotationAxis.value;
+  if (mode === "area") {
+    form.elements.first_function.value = "x**2";
+    form.elements.second_function.value = "x";
+    form.elements.lower_bound.value = "0";
+    form.elements.upper_bound.value = "1";
+  } else if (axis === "x") {
+    form.elements.first_function.value = "x";
+    form.elements.second_function.value = "0";
+    form.elements.lower_bound.value = "0";
+    form.elements.upper_bound.value = "1";
+  } else {
+    form.elements.first_function.value = "2";
+    form.elements.second_function.value = "1";
+    form.elements.lower_bound.value = "0";
+    form.elements.upper_bound.value = "3";
+  }
   form.requestSubmit();
-});
+}
+
+function updateMode(nextMode, solve = true) {
+  mode = nextMode;
+  const isVolume = mode === "volume";
+  areaModeButton.classList.toggle("active", !isVolume);
+  volumeModeButton.classList.toggle("active", isVolume);
+  areaModeButton.setAttribute("aria-pressed", String(!isVolume));
+  volumeModeButton.setAttribute("aria-pressed", String(isVolume));
+  document.querySelector("#volume-options").hidden = !isVolume;
+  document.querySelector("#intro-highlight").textContent = isVolume ? "a solid in 3D." : "between two curves.";
+  document.querySelector("#intro-copy").textContent = isVolume
+    ? "Choose an axis and bound the region. We’ll select disks or washers, explain the radii, and build a rotatable-solid view one step at a time."
+    : "Enter two functions and an interval. We’ll find where they cross, show which curve is on top, and build the integral one step at a time.";
+  document.querySelector(".intro .eyebrow").innerHTML = isVolume
+    ? "SINGLE VARIABLE CALCULUS <span>·</span> VOLUME"
+    : "SINGLE VARIABLE CALCULUS <span>·</span> AREA";
+  document.querySelector(".input-panel .panel-heading h2").textContent = isVolume ? "Set up the region" : "Set up the curves";
+  document.querySelector("#result-title").textContent = isVolume ? "Explore the solid" : "Follow the steps";
+  document.querySelector("#total-label").textContent = isVolume ? "TOTAL VOLUME" : "TOTAL AREA";
+  document.querySelector("#bounds-hint").textContent = isVolume ? "along the rotation axis" : "where to measure the area";
+  document.querySelector("#interval-variable").textContent = isVolume
+    ? `${rotationAxis.value} interval`
+    : "x interval";
+  document.querySelector("#syntax-hint").textContent = isVolume
+    ? `Enter functions of ${rotationAxis.value}, such as ${rotationAxis.value}**2, ${rotationAxis.value}, or 0.`
+    : "Try x**2, sin(x), sqrt(x), or exp(x).";
+  document.querySelector(".solve-button span").textContent = isVolume ? "Solve this volume" : "Solve this area";
+  firstFunctionLabel.replaceChildren(
+    Object.assign(document.createElement("span"), { className: "curve-dot red" }),
+    document.createTextNode(isVolume
+      ? rotationAxis.value === "x" ? " y = f(x)" : " x = f(y)"
+      : " f(x)"),
+  );
+  secondFunctionLabel.replaceChildren(
+    Object.assign(document.createElement("span"), { className: "curve-dot blue" }),
+    document.createTextNode(isVolume
+      ? rotationAxis.value === "x" ? " y = g(x)" : " x = g(y)"
+      : " g(x)"),
+  );
+  graph.setAttribute("aria-label", isVolume
+    ? `Three-dimensional solid of revolution about the ${rotationAxis.value}-axis`
+    : "Graph of both functions and the shaded area");
+  document.querySelector("#chart-legend").innerHTML = isVolume
+    ? '<span><i class="legend-fill"></i>solid of revolution</span><span><i class="legend-line"></i>axis</span>'
+    : '<span><i class="legend-line red-line"></i>f(x)</span><span><i class="legend-line blue-line"></i>g(x)</span><span><i class="legend-fill"></i>area</span>';
+  if (solve) loadExample();
+}
+
+areaModeButton.addEventListener("click", () => updateMode("area"));
+volumeModeButton.addEventListener("click", () => updateMode("volume"));
+rotationAxis.addEventListener("change", () => updateMode("volume"));
+document.querySelector("#example-button").addEventListener("click", loadExample);
 previousButton.addEventListener("click", () => showStep(activeStep - 1));
 nextButton.addEventListener("click", () => showStep(activeStep + 1));
+updateMode("area", false);
 clearGraph();
 form.requestSubmit();
