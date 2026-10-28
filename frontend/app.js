@@ -1,5 +1,8 @@
 const form = document.querySelector("#solver-form");
 const graph = document.querySelector("#graph");
+const doubleGraphs = document.querySelector("#double-graphs");
+const dyGraph = document.querySelector("#dy-graph");
+const dxGraph = document.querySelector("#dx-graph");
 const stepsList = document.querySelector("#steps-list");
 const errorMessage = document.querySelector("#error-message");
 const areaValue = document.querySelector("#area-value");
@@ -10,6 +13,7 @@ const nextButton = document.querySelector("#next-step");
 const themeToggle = document.querySelector("#theme-toggle");
 const areaModeButton = document.querySelector("#area-mode");
 const volumeModeButton = document.querySelector("#volume-mode");
+const doubleIntegralModeButton = document.querySelector("#double-integral-mode");
 const rotationAxis = document.querySelector("#rotation-axis");
 const firstFunctionLabel = document.querySelector("#first-function-label");
 const secondFunctionLabel = document.querySelector("#second-function-label");
@@ -228,6 +232,57 @@ function drawSolid(data, selectedStep) {
     `Rotation about the ${data.axis}-axis · highlighted ${data.representative_slice.method}`));
 }
 
+function drawDoubleGraphs(data) {
+  const drawRegion = (target, strip, horizontal) => {
+    target.replaceChildren();
+    const width = 430;
+    const height = 330;
+    const margin = { left: 43, right: 16, top: 20, bottom: 35 };
+    const [xMin, xMax] = data.bounds;
+    const [yMin, yMax] = data.y_bounds;
+    const x = (value) => margin.left + ((value - xMin) / (xMax - xMin)) * (width - margin.left - margin.right);
+    const y = (value) => height - margin.bottom - ((value - yMin) / (yMax - yMin)) * (height - margin.top - margin.bottom);
+    const region = [
+      ...data.plot.map((point) => `${x(point.x)},${y(point.upper)}`),
+      ...data.plot.slice().reverse().map((point) => `${x(point.x)},${y(point.lower)}`),
+    ];
+    target.append(svgElement("path", { d: `M${region.join(" L")} Z`, class: "double-region" }));
+    target.append(svgElement("line", {
+      x1: x(data.bounds[0]), y1: y(data.plot[0].lower),
+      x2: x(data.bounds[1]), y2: y(data.plot[data.plot.length - 1].lower), class: "plot-line-first",
+    }));
+    target.append(svgElement("line", {
+      x1: x(data.bounds[0]), y1: y(data.plot[0].upper),
+      x2: x(data.bounds[1]), y2: y(data.plot[data.plot.length - 1].upper), class: "plot-line-second",
+    }));
+    target.append(svgElement("line", {
+      x1: x(xMin), y1: y(yMin), x2: x(xMin), y2: y(yMax), class: "axis-line",
+    }));
+    target.append(svgElement("line", {
+      x1: x(xMin), y1: y(yMin), x2: x(xMax), y2: y(yMin), class: "axis-line",
+    }));
+    if (horizontal) {
+      target.append(svgElement("line", {
+        x1: x(strip.left), y1: y(strip.y), x2: x(strip.right), y2: y(strip.y),
+        class: "double-strip horizontal",
+      }));
+    } else {
+      target.append(svgElement("line", {
+        x1: x(strip.x), y1: y(strip.lower), x2: x(strip.x), y2: y(strip.upper),
+        class: "double-strip",
+      }));
+    }
+    target.append(svgElement("text", {
+      x: width / 2, y: height - 7, "text-anchor": "middle", class: "tick-label",
+    }, "x"));
+    target.append(svgElement("text", {
+      x: 13, y: height / 2, "text-anchor": "middle", class: "tick-label",
+    }, "y"));
+  };
+  drawRegion(dyGraph, data.x_strip, false);
+  drawRegion(dxGraph, data.y_strip, true);
+}
+
 function showStep(index) {
   if (!solution) return;
   activeStep = Math.max(0, Math.min(index, solution.steps.length - 1));
@@ -235,7 +290,8 @@ function showStep(index) {
   stepCounter.textContent = `${activeStep + 1} / ${solution.steps.length}`;
   previousButton.disabled = activeStep === 0;
   nextButton.disabled = activeStep === solution.steps.length - 1;
-  if (mode === "volume") drawSolid(solution, activeStep);
+  if (mode === "double") drawDoubleGraphs(solution);
+  else if (mode === "volume") drawSolid(solution, activeStep);
   else drawGraph(solution, activeStep);
 }
 
@@ -254,12 +310,20 @@ function displaySolution(data) {
     stepsList.append(item);
   });
   const isVolume = mode === "volume";
-  const resultValue = isVolume ? data.volume : data.area;
+  const isDouble = mode === "double";
+  const resultValue = isVolume ? data.volume : isDouble ? data.dy_first_value : data.area;
   areaValue.replaceChildren(document.createTextNode(Number(resultValue.toPrecision(8)).toString()));
   const units = document.createElement("span");
-  units.textContent = isVolume ? " cubic units" : " square units";
+  units.textContent = isVolume ? " cubic units" : isDouble ? " (both orders)" : " square units";
   areaValue.append(units);
-  intervalSummary.textContent = `${data.variable || "x"} ∈ [${numberLabel(data.bounds[0])}, ${numberLabel(data.bounds[1])}]${isVolume ? ` · ${data.axis}-axis rotation` : ""}`;
+  document.querySelector("#double-answer").hidden = !isDouble;
+  if (isDouble) {
+    document.querySelector("#double-answer").textContent =
+      `dy first: ${Number(data.dy_first_value.toPrecision(8))} · dx first: ${Number(data.dx_first_value.toPrecision(8))}`;
+  }
+  intervalSummary.textContent = isDouble
+    ? `x ∈ [${numberLabel(data.bounds[0])}, ${numberLabel(data.bounds[1])}] · both orders agree`
+    : `${data.variable || "x"} ∈ [${numberLabel(data.bounds[0])}, ${numberLabel(data.bounds[1])}]${isVolume ? ` · ${data.axis}-axis rotation` : ""}`;
   showStep(0);
 }
 
@@ -271,18 +335,29 @@ form.addEventListener("submit", async (event) => {
   submitButton.disabled = true;
   submitButton.firstElementChild.textContent = "Solving…";
   const isVolume = mode === "volume";
+  const isDouble = mode === "double";
   const request = {
     first_function: form.elements.first_function.value,
     second_function: form.elements.second_function.value,
     lower_bound: form.elements.lower_bound.value === "" ? null : Number(form.elements.lower_bound.value),
     upper_bound: form.elements.upper_bound.value === "" ? null : Number(form.elements.upper_bound.value),
   };
+  const doubleRequest = {
+    integrand: document.querySelector("#integrand").value,
+    lower_function: document.querySelector("#lower-function").value,
+    upper_function: document.querySelector("#upper-function").value,
+    lower_bound: Number(document.querySelector("#double-lower-bound").value),
+    upper_bound: Number(document.querySelector("#double-upper-bound").value),
+  };
   try {
-    const response = await fetch(isVolume ? "/api/solve-volume" : "/api/solve", {
+    const response = await fetch(
+      isDouble ? "/api/solve-double-integral" : isVolume ? "/api/solve-volume" : "/api/solve",
+      {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(isVolume ? { ...request, axis: rotationAxis.value } : request),
-    });
+      body: JSON.stringify(isDouble ? doubleRequest : isVolume ? { ...request, axis: rotationAxis.value } : request),
+      },
+    );
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || "The problem could not be solved.");
     if (requestId === latestRequest) displaySolution(result);
@@ -294,14 +369,22 @@ form.addEventListener("submit", async (event) => {
   } finally {
     if (requestId === latestRequest) {
       submitButton.disabled = false;
-      submitButton.firstElementChild.textContent = mode === "volume" ? "Solve this volume" : "Solve this area";
+      submitButton.firstElementChild.textContent = mode === "volume"
+        ? "Solve this volume"
+        : mode === "double" ? "Solve this double integral" : "Solve this area";
     }
   }
 });
 
 function loadExample() {
   const axis = rotationAxis.value;
-  if (mode === "area") {
+  if (mode === "double") {
+    document.querySelector("#integrand").value = "x + y";
+    document.querySelector("#lower-function").value = "x";
+    document.querySelector("#upper-function").value = "2 - x";
+    document.querySelector("#double-lower-bound").value = "0";
+    document.querySelector("#double-upper-bound").value = "1";
+  } else if (mode === "area") {
     form.elements.first_function.value = "x**2";
     form.elements.second_function.value = "x";
     form.elements.lower_bound.value = "0";
@@ -323,21 +406,33 @@ function loadExample() {
 function updateMode(nextMode, solve = true) {
   mode = nextMode;
   const isVolume = mode === "volume";
-  areaModeButton.classList.toggle("active", !isVolume);
+  const isDouble = mode === "double";
   volumeModeButton.classList.toggle("active", isVolume);
-  areaModeButton.setAttribute("aria-pressed", String(!isVolume));
+  doubleIntegralModeButton.classList.toggle("active", isDouble);
+  areaModeButton.classList.toggle("active", !isVolume && !isDouble);
+  areaModeButton.setAttribute("aria-pressed", String(!isVolume && !isDouble));
   volumeModeButton.setAttribute("aria-pressed", String(isVolume));
+  doubleIntegralModeButton.setAttribute("aria-pressed", String(isDouble));
   document.querySelector("#volume-options").hidden = !isVolume;
-  document.querySelector("#intro-highlight").textContent = isVolume ? "a solid in 3D." : "between two curves.";
+  document.querySelector("#single-inputs").hidden = isDouble;
+  document.querySelector("#double-inputs").hidden = !isDouble;
+  document.querySelector("#graph").hidden = isDouble;
+  doubleGraphs.hidden = !isDouble;
+  document.querySelector("#chart-legend").hidden = isDouble;
+  document.querySelector("#intro-highlight").textContent = isVolume
+    ? "a solid in 3D."
+    : isDouble ? "a double integral." : "between two curves.";
   document.querySelector("#intro-copy").textContent = isVolume
     ? "Choose an axis and bound the region. We’ll select disks or washers, explain the radii, and build a rotatable-solid view one step at a time."
-    : "Enter two functions and an interval. We’ll find where they cross, show which curve is on top, and build the integral one step at a time.";
+    : isDouble
+      ? "Describe a region between straight-line boundaries. See vertical and horizontal strips, derive both orders, and compare their answers."
+      : "Enter two functions and an interval. We’ll find where they cross, show which curve is on top, and build the integral one step at a time.";
   document.querySelector(".intro .eyebrow").innerHTML = isVolume
     ? "SINGLE VARIABLE CALCULUS <span>·</span> VOLUME"
-    : "SINGLE VARIABLE CALCULUS <span>·</span> AREA";
-  document.querySelector(".input-panel .panel-heading h2").textContent = isVolume ? "Set up the region" : "Set up the curves";
-  document.querySelector("#result-title").textContent = isVolume ? "Explore the solid" : "Follow the steps";
-  document.querySelector("#total-label").textContent = isVolume ? "TOTAL VOLUME" : "TOTAL AREA";
+    : isDouble ? "MULTIVARIABLE CALCULUS <span>·</span> DOUBLE INTEGRALS" : "SINGLE VARIABLE CALCULUS <span>·</span> AREA";
+  document.querySelector(".input-panel .panel-heading h2").textContent = isVolume || isDouble ? "Set up the region" : "Set up the curves";
+  document.querySelector("#result-title").textContent = isVolume ? "Explore the solid" : isDouble ? "Compare both orders" : "Follow the steps";
+  document.querySelector("#total-label").textContent = isVolume ? "TOTAL VOLUME" : isDouble ? "INTEGRAL VALUE" : "TOTAL AREA";
   document.querySelector("#bounds-hint").textContent = isVolume ? "along the rotation axis" : "where to measure the area";
   document.querySelector("#interval-variable").textContent = isVolume
     ? `${rotationAxis.value} interval`
@@ -345,7 +440,9 @@ function updateMode(nextMode, solve = true) {
   document.querySelector("#syntax-hint").textContent = isVolume
     ? `Enter functions of ${rotationAxis.value}, such as ${rotationAxis.value}**2, ${rotationAxis.value}, or 0.`
     : "Try x**2, sin(x), sqrt(x), or exp(x).";
-  document.querySelector(".solve-button span").textContent = isVolume ? "Solve this volume" : "Solve this area";
+  document.querySelector(".solve-button span").textContent = isVolume
+    ? "Solve this volume"
+    : isDouble ? "Solve this double integral" : "Solve this area";
   firstFunctionLabel.replaceChildren(
     Object.assign(document.createElement("span"), { className: "curve-dot red" }),
     document.createTextNode(isVolume
@@ -369,6 +466,7 @@ function updateMode(nextMode, solve = true) {
 
 areaModeButton.addEventListener("click", () => updateMode("area"));
 volumeModeButton.addEventListener("click", () => updateMode("volume"));
+doubleIntegralModeButton.addEventListener("click", () => updateMode("double"));
 rotationAxis.addEventListener("change", () => updateMode("volume"));
 document.querySelector("#example-button").addEventListener("click", loadExample);
 previousButton.addEventListener("click", () => showStep(activeStep - 1));

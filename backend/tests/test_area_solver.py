@@ -9,6 +9,7 @@ from backend.area_solver import (
     solve_area_between_curves,
     solve_volume_of_revolution,
 )
+from backend.double_integral_solver import solve_double_integral
 
 
 def test_area_under_curve_quadratic():
@@ -64,3 +65,19 @@ def test_volume_splits_when_region_crosses_rotation_axis():
     result = solve_volume_of_revolution("x", "0", "x", -1, 1)
     assert len(result["sections"]) == 2
     assert math.isclose(result["volume"], 2 * math.pi / 3, rel_tol=1e-9)
+
+
+def test_double_integral_derives_reversed_limits_for_triangle():
+    result = solve_double_integral("x + y", "x", "2 - x", 0, 1)
+
+    assert len(result["steps"]) >= 8
+    assert len(result["plot"]) > 2
+    assert math.isclose(result["dy_first_value"], 4 / 3, rel_tol=1e-9)
+    assert math.isclose(result["dx_first_value"], result["dy_first_value"], rel_tol=1e-9)
+    assert "∫[0, 1]" in result["dx_first_setup"]
+    assert "∫[1, 2]" in result["dx_first_setup"]
+
+
+def test_double_integral_rejects_curved_region_boundaries():
+    with pytest.raises(ValueError, match="straight-line boundaries"):
+        solve_double_integral("1", "x**2", "1", 0, 1)

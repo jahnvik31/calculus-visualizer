@@ -175,6 +175,14 @@ code { color: var(--code); font: 10px Consolas, monospace; }
 .icon-button:disabled { color: var(--text-hint); cursor: default; }
 .chart-wrap { position: relative; overflow: hidden; border: 1px solid var(--border-chart); border-radius: 8px; background: linear-gradient(180deg, var(--chart-top), var(--chart-bottom)); }
 #graph { display: block; width: 100%; height: auto; min-height: 275px; }
+#double-graphs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px; }
+#double-graphs figure { min-width: 0; margin: 0; }
+#double-graphs figcaption { margin: 0 0 6px; color: var(--text-faint); text-align: center; font-size: 10px; font-weight: 600; }
+#double-graphs svg { display: block; width: 100%; height: auto; }
+.double-region { fill: var(--area); fill-opacity: .38; stroke: var(--area-stroke); stroke-width: 1.5; }
+.double-strip { stroke: var(--red); stroke-width: 4; stroke-linecap: round; }
+.double-strip.horizontal { stroke: var(--blue); }
+.double-answer { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--summary-border); color: var(--text-label); font: 11px/1.6 Consolas, monospace; }
 .chart-legend { position: absolute; z-index: 1; top: 13px; right: 15px; display: flex; gap: 13px; align-items: center; color: var(--text-faint); font-size: 9px; }
 .chart-legend span { display: flex; gap: 5px; align-items: center; }
 .legend-line { display: inline-block; width: 12px; height: 2px; }
@@ -213,7 +221,7 @@ code { color: var(--code); font: 10px Consolas, monospace; }
   .page-shell { padding: 0 22px; }
   .workspace { grid-template-columns: 1fr; }
   .input-panel { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; align-items: start; }
-  .input-panel .panel-heading, #volume-options, .bounds-heading, .bounds-fields, .syntax-hint, .solve-button, .error-message { grid-column: 1 / -1; }
+  .input-panel .panel-heading, #single-inputs, #double-inputs, #volume-options, .bounds-heading, .bounds-fields, .syntax-hint, .solve-button, .error-message { grid-column: 1 / -1; }
   .input-panel .panel-heading { margin-bottom: 14px; }
   .function-field { margin-bottom: 0; }
   .bounds-heading { margin-top: 16px; }
@@ -231,6 +239,7 @@ code { color: var(--code); font: 10px Consolas, monospace; }
   .function-field { margin-bottom: 9px; }
   .result-panel { padding: 19px 14px 15px; }
   .chart-legend { top: 10px; right: 9px; gap: 8px; font-size: 8px; }
+  #double-graphs { grid-template-columns: 1fr; gap: 6px; padding: 10px; }
   #graph { min-height: 225px; }
   .result-summary { align-items: flex-start; flex-direction: column; gap: 5px; }
   .interval-summary { text-align: left; }
