@@ -10,6 +10,7 @@ from typing import Any
 import sympy as sp
 
 X = sp.Symbol("x", real=True)
+Y = sp.Symbol("y", real=True)
 MAX_EXPRESSION_LENGTH = 128
 MAX_EXPONENT = 12
 FUNCTIONS = {
@@ -33,8 +34,8 @@ OPERATORS = {
 
 def parse_expression(expression: str, variable: str = "x") -> sp.Expr:
     """Parse a small arithmetic expression without evaluating arbitrary Python."""
-    if variable not in {"x", "y"}:
-        raise ValueError("The variable must be x or y.")
+    if variable not in {"x", "y", "xy"}:
+        raise ValueError("The variable must be x, y, or xy.")
     if not isinstance(expression, str) or not expression.strip():
         raise ValueError("Enter a function before solving.")
     if len(expression) > MAX_EXPRESSION_LENGTH:
@@ -51,6 +52,8 @@ def parse_expression(expression: str, variable: str = "x") -> sp.Expr:
                 raise ValueError("Function constants must be finite.")
             return sp.sympify(node.value)
         if isinstance(node, ast.Name):
+            if variable == "xy" and node.id in {"x", "y"}:
+                return X if node.id == "x" else Y
             if node.id == variable:
                 return X
             if node.id in CONSTANTS:

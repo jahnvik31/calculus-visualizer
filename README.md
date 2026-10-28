@@ -23,7 +23,7 @@ Pick a problem type, enter your functions, and get:
 |---|---|---|
 | Area between curves | Single Variable Calculus | Implemented |
 | Volume of solids of revolution | Single Variable Calculus | Implemented |
-| Double integrals and change of order | Multivariable Integral Calculus | Planned |
+| Double integrals and change of order | Multivariable Integral Calculus | Implemented |
 
 ## Tech stack
 
@@ -43,12 +43,14 @@ python -m uvicorn backend.main:app --reload
 
 Open http://127.0.0.1:8000. The solver accepts `x`, numeric constants, `pi`, `e`,
 `+`, `-`, `*`, `/`, `**`, and `sin`, `cos`, `tan`, `exp`, `log`, `sqrt`, and `abs`.
+The double-integral solver accepts integrands in `x` and `y`; its region is
+specified by straight-line lower and upper `y(x)` boundaries and an `x` interval.
 
 ## Roadmap
 
 - [x] Area between curves solver
 - [x] Volume of revolution solver
-- [ ] Double integral solver
+- [x] Double integral solver with change of order for straight-line regions
 - [ ] Ratings and feedback page
 - [ ] Deployment
 

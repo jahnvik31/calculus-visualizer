@@ -37,6 +37,7 @@
         <div class="mode-switch" role="group" aria-label="Choose a calculus solver">
           <button type="button" class="mode-button active" id="area-mode" aria-pressed="true">Area between curves</button>
           <button type="button" class="mode-button" id="volume-mode" aria-pressed="false">Volume of revolution</button>
+          <button type="button" class="mode-button" id="double-integral-mode" aria-pressed="false">Double integrals</button>
         </div>
       </section>
 
@@ -50,34 +51,61 @@
             <button class="text-button" type="button" id="example-button">Load example ↗</button>
           </div>
 
-          <label class="axis-field" id="volume-options" hidden>
-            <span class="field-label">Axis of rotation</span>
-            <select id="rotation-axis" name="axis">
-              <option value="x">x-axis</option>
-              <option value="y">y-axis</option>
-            </select>
-          </label>
+          <div id="single-inputs">
+            <label class="axis-field" id="volume-options" hidden>
+              <span class="field-label">Axis of rotation</span>
+              <select id="rotation-axis" name="axis">
+                <option value="x">x-axis</option>
+                <option value="y">y-axis</option>
+              </select>
+            </label>
 
-          <label class="function-field first-function">
-            <span id="first-function-label" class="field-label"><span class="curve-dot red"></span> f(x)</span>
-            <input id="first-function" name="first_function" value="x**2" autocomplete="off" spellcheck="false" aria-label="First function f of x" />
-          </label>
-          <label class="function-field second-function">
-            <span id="second-function-label" class="field-label"><span class="curve-dot blue"></span> g(x)</span>
-            <input id="second-function" name="second_function" value="x" autocomplete="off" spellcheck="false" aria-label="Second function g of x" />
-          </label>
+            <label class="function-field first-function">
+              <span id="first-function-label" class="field-label"><span class="curve-dot red"></span> f(x)</span>
+              <input id="first-function" name="first_function" value="x**2" autocomplete="off" spellcheck="false" aria-label="First function f of x" />
+            </label>
+            <label class="function-field second-function">
+              <span id="second-function-label" class="field-label"><span class="curve-dot blue"></span> g(x)</span>
+              <input id="second-function" name="second_function" value="x" autocomplete="off" spellcheck="false" aria-label="Second function g of x" />
+            </label>
 
-          <div class="bounds-heading">
-            <span id="interval-variable" class="field-label">x interval</span>
-            <span id="bounds-hint" class="bounds-hint">where to measure the area</span>
+            <div class="bounds-heading">
+              <span id="interval-variable" class="field-label">x interval</span>
+              <span id="bounds-hint" class="bounds-hint">where to measure the area</span>
+            </div>
+            <div class="bounds-fields">
+              <label class="bound-input"><span>a</span><input id="lower-bound" name="lower_bound" type="number" step="any" value="0" aria-label="Lower x bound" /></label>
+              <span class="bound-separator">to</span>
+              <label class="bound-input"><span>b</span><input id="upper-bound" name="upper_bound" type="number" step="any" value="1" aria-label="Upper x bound" /></label>
+            </div>
+
+            <p id="syntax-hint" class="syntax-hint">Try <code>x**2</code>, <code>sin(x)</code>, <code>sqrt(x)</code>, or <code>exp(x)</code>.</p>
           </div>
-          <div class="bounds-fields">
-            <label class="bound-input"><span>a</span><input id="lower-bound" name="lower_bound" type="number" step="any" value="0" aria-label="Lower x bound" /></label>
-            <span class="bound-separator">to</span>
-            <label class="bound-input"><span>b</span><input id="upper-bound" name="upper_bound" type="number" step="any" value="1" aria-label="Upper x bound" /></label>
-          </div>
 
-          <p id="syntax-hint" class="syntax-hint">Try <code>x**2</code>, <code>sin(x)</code>, <code>sqrt(x)</code>, or <code>exp(x)</code>.</p>
+          <div id="double-inputs" hidden>
+            <label class="function-field">
+              <span class="field-label">f(x, y)</span>
+              <input id="integrand" value="x + y" autocomplete="off" spellcheck="false" aria-label="Double integral integrand" />
+            </label>
+            <label class="function-field">
+              <span class="field-label">Lower y(x)</span>
+              <input id="lower-function" value="x" autocomplete="off" spellcheck="false" aria-label="Lower y boundary as a function of x" />
+            </label>
+            <label class="function-field">
+              <span class="field-label">Upper y(x)</span>
+              <input id="upper-function" value="2 - x" autocomplete="off" spellcheck="false" aria-label="Upper y boundary as a function of x" />
+            </label>
+            <div class="bounds-heading">
+              <span class="field-label">x interval</span>
+              <span class="bounds-hint">vertical boundaries</span>
+            </div>
+            <div class="bounds-fields">
+              <label class="bound-input"><span>a</span><input id="double-lower-bound" type="number" step="any" value="0" aria-label="Lower x boundary" /></label>
+              <span class="bound-separator">to</span>
+              <label class="bound-input"><span>b</span><input id="double-upper-bound" type="number" step="any" value="1" aria-label="Upper x boundary" /></label>
+            </div>
+            <p class="syntax-hint">Use x, y, numbers, and basic math. Region boundaries must be straight lines, such as <code>x</code> and <code>2 - x</code>.</p>
+          </div>
           <button class="solve-button" type="submit"><span>Solve this area</span><span aria-hidden="true">→</span></button>
           <p id="error-message" class="error-message" role="alert" hidden></p>
         </form>
@@ -98,6 +126,16 @@
           <div class="chart-wrap">
             <div id="chart-legend" class="chart-legend"><span><i class="legend-line red-line"></i>f(x)</span><span><i class="legend-line blue-line"></i>g(x)</span><span><i class="legend-fill"></i>area</span></div>
             <svg id="graph" viewBox="0 0 900 430" role="img" aria-label="Graph of both functions and the shaded area"></svg>
+            <div id="double-graphs" hidden>
+              <figure>
+                <figcaption>dy first · vertical strips</figcaption>
+                <svg id="dy-graph" viewBox="0 0 430 330" role="img" aria-label="Region with a vertical strip for dy first"></svg>
+              </figure>
+              <figure>
+                <figcaption>dx first · horizontal strips</figcaption>
+                <svg id="dx-graph" viewBox="0 0 430 330" role="img" aria-label="Region with a horizontal strip for dx first"></svg>
+              </figure>
+            </div>
           </div>
           <div class="result-summary">
             <div>
@@ -106,6 +144,7 @@
             </div>
             <p id="interval-summary" class="interval-summary">Enter a problem to see the shaded region.</p>
           </div>
+          <p id="double-answer" class="double-answer" hidden></p>
           <div id="steps-list" class="steps-list"></div>
         </section>
       </section>
