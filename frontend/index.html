@@ -15,6 +15,8 @@
       }
     </script>
     <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     <script src="/assets/app.js" defer></script>
   </head>
   <body>
@@ -123,6 +125,10 @@
             </div>
           </div>
 
+          <div id="equations" class="equations" aria-label="Curve equations">
+            <p class="equation-first"><span id="first-equation-label">f(x) = </span><span id="first-equation"></span></p>
+            <p class="equation-second"><span id="second-equation-label">g(x) = </span><span id="second-equation"></span></p>
+          </div>
           <div class="chart-wrap">
             <div id="chart-legend" class="chart-legend"><span><i class="legend-line red-line"></i>f(x)</span><span><i class="legend-line blue-line"></i>g(x)</span><span><i class="legend-fill"></i>area</span></div>
             <svg id="graph" viewBox="0 0 900 430" role="img" aria-label="Graph of both functions and the shaded area"></svg>

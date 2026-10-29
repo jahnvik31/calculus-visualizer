@@ -21,36 +21,26 @@ Pick a problem type, enter your functions, and get:
 
 | Problem type | Syllabus module | Status |
 |---|---|---|
-| Area between curves | Single Variable Calculus | Implemented |
-| Volume of solids of revolution | Single Variable Calculus | Implemented |
-| Double integrals and change of order | Multivariable Integral Calculus | Implemented |
+| Area between curves | Single Variable Calculus | Planned |
+| Volume of solids of revolution | Single Variable Calculus | Planned |
+| Double integrals and change of order | Multivariable Integral Calculus | Planned |
 
 ## Tech stack
 
 - **Backend:** Python, FastAPI, SymPy
-- **Frontend:** HTML, CSS, JavaScript, SVG
+- **Frontend:** React, KaTeX, Plotly.js
 - **Database:** PostgreSQL (ratings and feedback)
 - **DevOps:** Docker, GitHub Actions
 
-## Run locally
+## Getting started
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python -m uvicorn backend.main:app --reload
-```
-
-Open http://127.0.0.1:8000. The solver accepts `x`, numeric constants, `pi`, `e`,
-`+`, `-`, `*`, `/`, `**`, and `sin`, `cos`, `tan`, `exp`, `log`, `sqrt`, and `abs`.
-The double-integral solver accepts integrands in `x` and `y`; its region is
-specified by straight-line lower and upper `y(x)` boundaries and an `x` interval.
+Setup instructions will be added once the first version is running.
 
 ## Roadmap
 
-- [x] Area between curves solver
-- [x] Volume of revolution solver
-- [x] Double integral solver with change of order for straight-line regions
+- [ ] Area between curves solver
+- [ ] Volume of revolution solver
+- [ ] Double integral solver
 - [ ] Ratings and feedback page
 - [ ] Deployment
 

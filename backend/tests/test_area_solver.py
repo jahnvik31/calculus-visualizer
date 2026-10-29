@@ -28,6 +28,8 @@ def test_solver_returns_steps_and_area():
     assert len(result["steps"]) >= 4
     assert math.isclose(result["area"], 1.0 / 6.0, rel_tol=1e-9)
     assert len(result["plot"]) > 2
+    assert result["first_curve_latex"] == "x^{2}"
+    assert result["second_curve_latex"] == "x"
 
 
 def test_area_is_split_at_crossing_inside_interval():
@@ -59,6 +61,8 @@ def test_volume_about_y_axis_uses_washers_and_y_variable():
     assert math.isclose(result["volume"], 9 * math.pi, rel_tol=1e-9)
     assert result["sections"][0]["method"] == "washer"
     assert result["variable"] == "y"
+    y_variable_result = solve_volume_of_revolution("y", "0", "y", 0, 3)
+    assert y_variable_result["first_curve_latex"] == "y"
 
 
 def test_volume_splits_when_region_crosses_rotation_axis():
