@@ -43,9 +43,19 @@ def test_rejects_python_execution_syntax():
         parse_expression("__import__('os').system('echo unsafe')")
 
 
+def test_rejects_overlong_expression():
+    with pytest.raises(ValueError, match="at most 128 characters"):
+        parse_expression("x" * 129)
+
+
 def test_rejects_reversed_bounds():
     with pytest.raises(ValueError, match="lower bound"):
         area_between_curves("x", "0", 2, 1)
+
+
+def test_requires_intersections_when_bounds_are_omitted():
+    with pytest.raises(ValueError, match="at least two real intersections"):
+        solve_area_between_curves("x", "x + 1")
 
 
 def test_volume_about_x_axis_uses_disks_and_highlights_a_slice():

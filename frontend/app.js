@@ -75,6 +75,17 @@ function renderEquation(element, latex) {
   else element.textContent = latex;
 }
 
+function readableError(detail) {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => {
+      const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : "";
+      return `${field ? `${field}: ` : ""}${item.msg || "Invalid input."}`;
+    }).join(" ");
+  }
+  return "The problem could not be solved.";
+}
+
 function drawGraph(data, selectedStep) {
   graph.replaceChildren();
   const width = 900;
@@ -373,7 +384,7 @@ form.addEventListener("submit", async (event) => {
       },
     );
     const result = await response.json();
-    if (!response.ok) throw new Error(result.detail || "The problem could not be solved.");
+    if (!response.ok) throw new Error(readableError(result.detail));
     if (requestId === latestRequest) displaySolution(result);
   } catch (error) {
     if (requestId === latestRequest) {
