@@ -17,6 +17,9 @@ const doubleIntegralModeButton = document.querySelector("#double-integral-mode")
 const rotationAxis = document.querySelector("#rotation-axis");
 const firstFunctionLabel = document.querySelector("#first-function-label");
 const secondFunctionLabel = document.querySelector("#second-function-label");
+const equations = document.querySelector("#equations");
+const firstEquation = document.querySelector("#first-equation");
+const secondEquation = document.querySelector("#second-equation");
 const SVG_NS = "http://www.w3.org/2000/svg";
 let solution = null;
 let activeStep = -1;
@@ -66,6 +69,12 @@ function numberLabel(value) {
   return Number(value.toPrecision(3)).toString();
 }
 
+function renderEquation(element, latex) {
+  element.replaceChildren();
+  if (window.katex) window.katex.render(latex, element, { throwOnError: false });
+  else element.textContent = latex;
+}
+
 function drawGraph(data, selectedStep) {
   graph.replaceChildren();
   const width = 900;
@@ -101,7 +110,8 @@ function drawGraph(data, selectedStep) {
   graph.append(svgElement("text", { x: axisX + 8, y: margin.top + 10, class: "tick-label" }, "y"));
 
   if (selectedStep >= 2) {
-    for (const interval of data.intervals) {
+    const shadedIntervals = data.intervals.slice(0, Math.min(data.intervals.length, selectedStep - 1));
+    for (const interval of shadedIntervals) {
       const points = data.plot.filter((point) => point.x >= interval.lower - 1e-9 && point.x <= interval.upper + 1e-9);
       const topKey = interval.top === "f(x)" ? "first" : "second";
       const bottomKey = interval.bottom === "f(x)" ? "first" : "second";
@@ -297,6 +307,10 @@ function showStep(index) {
 
 function displaySolution(data) {
   solution = data;
+  if (mode !== "double") {
+    renderEquation(firstEquation, data.first_curve_latex);
+    renderEquation(secondEquation, data.second_curve_latex);
+  }
   stepsList.replaceChildren();
   data.steps.forEach((step, index) => {
     const item = document.createElement("button");
@@ -417,6 +431,7 @@ function updateMode(nextMode, solve = true) {
   document.querySelector("#single-inputs").hidden = isDouble;
   document.querySelector("#double-inputs").hidden = !isDouble;
   document.querySelector("#graph").hidden = isDouble;
+  equations.hidden = isDouble;
   doubleGraphs.hidden = !isDouble;
   document.querySelector("#chart-legend").hidden = isDouble;
   document.querySelector("#intro-highlight").textContent = isVolume
@@ -455,6 +470,14 @@ function updateMode(nextMode, solve = true) {
       ? rotationAxis.value === "x" ? " y = g(x)" : " x = g(y)"
       : " g(x)"),
   );
+  const equationVariable = isVolume ? rotationAxis.value : "x";
+  const equationOutput = isVolume ? (rotationAxis.value === "x" ? "y" : "x") : "y";
+  document.querySelector("#first-equation-label").textContent = isVolume
+    ? `${equationOutput} = f(${equationVariable}) = `
+    : "f(x) = ";
+  document.querySelector("#second-equation-label").textContent = isVolume
+    ? `${equationOutput} = g(${equationVariable}) = `
+    : "g(x) = ";
   graph.setAttribute("aria-label", isVolume
     ? `Three-dimensional solid of revolution about the ${rotationAxis.value}-axis`
     : "Graph of both functions and the shaded area");

@@ -263,6 +263,8 @@ def _area_solution(
     return {
         "first_curve": sp.sstr(f),
         "second_curve": sp.sstr(g),
+        "first_curve_latex": sp.latex(f),
+        "second_curve_latex": sp.latex(g),
         "bounds": [intervals[0][0], intervals[-1][1]],
         "intersections": intersections,
         "intervals": sections,
@@ -412,6 +414,8 @@ def solve_volume_of_revolution(
         "variable": variable,
         "first_curve": sp.sstr(f),
         "second_curve": sp.sstr(g),
+        "first_curve_latex": sp.latex(f.subs(X, sp.Symbol(variable, real=True))),
+        "second_curve_latex": sp.latex(g.subs(X, sp.Symbol(variable, real=True))),
         "bounds": [lower, upper],
         "sections": sections,
         "integral_setup": integral_setup,
